@@ -20,7 +20,6 @@ app.post('/generate-speech', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
   headless: "new",
-  channel: "chrome", // 🔥 dùng bản Chrome vừa tải
   args: ['--no-sandbox', '--disable-setuid-sandbox']
 });
 
