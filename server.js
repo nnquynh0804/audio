@@ -3,6 +3,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const { uploadFile } = require('./google-auth'); // 👈 Thêm dòng này
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,13 +19,12 @@ app.post('/generate-speech', async (req, res) => {
 
   try {
     const browser = await puppeteer.launch({
-  headless: true,
-  args: ['--no-sandbox', '--disable-setuid-sandbox']
-});
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
 
     const page = await browser.newPage();
 
-    // Set download behavior
     const client = await page.target().createCDPSession();
     await client.send('Page.setDownloadBehavior', {
       behavior: 'allow',
@@ -44,15 +44,16 @@ app.post('/generate-speech', async (req, res) => {
     await page.waitForSelector('button[aria-label="Tải xuống"]', { timeout: 15000 });
     await page.click('button[aria-label="Tải xuống"]');
 
-    // Chờ tải xong
     await new Promise(resolve => setTimeout(resolve, 6000));
 
-    // Lấy tên file vừa tải
     const files = fs.readdirSync(downloadPath).filter(f => f.endsWith('.wav'));
     const filePath = path.join(downloadPath, files[0]);
 
     const fileData = fs.readFileSync(filePath);
     const base64Audio = fileData.toString('base64');
+
+    // ✅ Upload lên Google Drive
+    const driveUrl = await uploadFile(filePath, files[0]);
 
     await browser.close();
 
@@ -60,8 +61,10 @@ app.post('/generate-speech', async (req, res) => {
       success: true,
       audioBase64: base64Audio,
       filename: files[0],
-      mimeType: "audio/wav"
+      mimeType: "audio/wav",
+      driveUrl: driveUrl // 👈 Trả về link Google Drive
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: error.message });
