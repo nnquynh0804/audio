@@ -1,6 +1,5 @@
 const express = require('express');
-const puppeteer = require('puppeteer-core');
-const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
@@ -20,29 +19,19 @@ app.post('/generate-speech', async (req, res) => {
   let browser;
 
   try {
-    // 👇 Mở trình duyệt headless đúng cách
-    const isProduction = process.env.AWS_EXECUTION_ENV === 'AWS_Lambda_nodejs18.x' || process.env.NODE_ENV === 'production';
-
-const browser = await puppeteer.launch({
-  args: chromium.args,
-  defaultViewport: chromium.defaultViewport,
-  executablePath: isProduction
-    ? await chromium.executablePath
-    : '/usr/bin/google-chrome', // hoặc chrome cài thủ công
-  headless: chromium.headless,
-});
-
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
 
     const page = await browser.newPage();
 
-    // 👇 Cho phép tải xuống
     const client = await page.target().createCDPSession();
     await client.send('Page.setDownloadBehavior', {
       behavior: 'allow',
       downloadPath,
     });
 
-    // 👇 Điều hướng và thao tác trên trang
     await page.goto('https://aistudio.google.com/generate-speech', {
       waitUntil: 'networkidle2',
     });
@@ -56,7 +45,6 @@ const browser = await puppeteer.launch({
     await page.waitForSelector('button[aria-label="Tải xuống"]', { timeout: 15000 });
     await page.click('button[aria-label="Tải xuống"]');
 
-    // ⏱️ Chờ tải về
     await new Promise(resolve => setTimeout(resolve, 6000));
 
     const files = fs.readdirSync(downloadPath).filter(f => f.endsWith('.wav'));
@@ -78,11 +66,10 @@ const browser = await puppeteer.launch({
       driveUrl,
     });
 
-    // 👇 Dọn file nếu muốn
-    fs.unlinkSync(filePath);
+    fs.unlinkSync(filePath); // Dọn file
 
   } catch (error) {
-    console.error('❌ Lỗi:', error);
+    console.error("❌ Lỗi:", error);
     res.status(500).json({ success: false, error: error.message });
   } finally {
     if (browser) await browser.close();
