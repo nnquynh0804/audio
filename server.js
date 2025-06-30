@@ -18,12 +18,13 @@ app.post('/generate-speech', async (req, res) => {
   fs.mkdirSync(downloadPath, { recursive: true });
 
   try {
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath || '/usr/bin/chromium-browser',
-      headless: chromium.headless,
-    });
+   const browser = await puppeteer.launch({
+  args: chromium.args,
+  defaultViewport: chromium.defaultViewport,
+  executablePath: await chromium.executablePath,
+  headless: chromium.headless,
+});
+
 
     const page = await browser.newPage();
 
