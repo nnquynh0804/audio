@@ -21,12 +21,17 @@ app.post('/generate-speech', async (req, res) => {
 
   try {
     // 👇 Mở trình duyệt headless đúng cách
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
-    });
+    const isProduction = process.env.AWS_EXECUTION_ENV === 'AWS_Lambda_nodejs18.x' || process.env.NODE_ENV === 'production';
+
+const browser = await puppeteer.launch({
+  args: chromium.args,
+  defaultViewport: chromium.defaultViewport,
+  executablePath: isProduction
+    ? await chromium.executablePath
+    : '/usr/bin/google-chrome', // hoặc chrome cài thủ công
+  headless: chromium.headless,
+});
+
 
     const page = await browser.newPage();
 
